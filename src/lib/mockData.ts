@@ -26,9 +26,9 @@ export const MOCK_APPS: AppItemType[] = [
     description: "File Explorer"
   },
   {
-    id: "spotify",
-    name: "Spotify",
-    icon: "Music",
-    description: "Spotify Music Player"
+    id: "notepad",
+    name: "Notepad",
+    icon: "notepad",
+    description: "Text Editor"
   }
 ];

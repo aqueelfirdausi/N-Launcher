@@ -17,9 +17,14 @@ const REAL_TARGETS: &[AppTarget] = &[
     program: "wt.exe",
     success_message: "Opened Windows Terminal",
   },
+  AppTarget {
+    id: "notepad",
+    program: "notepad.exe",
+    success_message: "Opened Notepad",
+  },
 ];
 
-const MOCK_TARGETS: &[&'static str] = &["spotify"];
+const MOCK_TARGETS: &[&'static str] = &[];
 
 fn resolve_vscode_path() -> Option<std::path::PathBuf> {
   // A. User install path: %LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe

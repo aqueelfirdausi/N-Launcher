@@ -8,7 +8,8 @@ import {
   Settings, 
   Power, 
   Search,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from "lucide-react";
 
 interface AppIconProps {
@@ -35,6 +36,8 @@ export const AppIcon: React.FC<AppIconProps> = ({ name, className = "", size = 2
       return <Power className={className} size={size} />;
     case "Search":
       return <Search className={className} size={size} />;
+    case "notepad":
+      return <FileText className={className} size={size} />;
     default:
       return <AlertCircle className={className} size={size} />;
   }
