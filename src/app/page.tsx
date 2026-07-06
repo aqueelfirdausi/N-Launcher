@@ -36,6 +36,11 @@ export default function LauncherPage() {
     setIsNative((window as any).__TAURI_INTERNALS__ !== undefined);
   }, []);
 
+  // Auto-focus search input when it becomes available
+  useEffect(() => {
+    searchInputRef?.focus();
+  }, [searchInputRef]);
+
   // Handle simulated action launches
   const triggerAppLaunch = (app: AppItemType) => {
     setToastMessage(`Launching ${app.name} (Simulated action)...`);
