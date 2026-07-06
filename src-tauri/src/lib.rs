@@ -19,7 +19,7 @@ const REAL_TARGETS: &[AppTarget] = &[
   },
 ];
 
-const MOCK_TARGETS: &[&'static str] = &["chrome", "spotify"];
+const MOCK_TARGETS: &[&'static str] = &["spotify"];
 
 fn resolve_vscode_path() -> Option<std::path::PathBuf> {
   // A. User install path: %LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe
@@ -58,11 +58,60 @@ fn launch_vscode() -> Result<String, String> {
   Ok("Opened VS Code".to_string())
 }
 
+fn resolve_chrome_path() -> Option<std::path::PathBuf> {
+  // A. System 64-bit install path
+  let path_64 = std::path::Path::new(r"C:\Program Files\Google\Chrome\Application\chrome.exe");
+  if path_64.exists() {
+    return Some(path_64.to_path_buf());
+  }
+
+  // B. System 32-bit install path
+  let path_32 = std::path::Path::new(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe");
+  if path_32.exists() {
+    return Some(path_32.to_path_buf());
+  }
+
+  // C. User LocalAppData install path
+  if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+    let path = std::path::Path::new(&local_app_data)
+      .join("Google")
+      .join("Chrome")
+      .join("Application")
+      .join("chrome.exe");
+    if path.exists() {
+      return Some(path);
+    }
+  }
+
+  None
+}
+
+fn launch_chrome() -> Result<String, String> {
+  if let Some(path) = resolve_chrome_path() {
+    std::process::Command::new(path)
+      .spawn()
+      .map_err(|e| format!("Failed to launch Chrome: {}", e))?;
+    return Ok("Opened Chrome".to_string());
+  }
+
+  // D. Fallback to PATH: chrome.exe
+  std::process::Command::new("chrome.exe")
+    .spawn()
+    .map_err(|_| "Chrome executable not found".to_string())?;
+
+  Ok("Opened Chrome".to_string())
+}
+
 #[tauri::command]
 fn launch_app(target_id: String) -> Result<String, String> {
   // Handle VS Code separately due to dynamic resolution
   if target_id == "vscode" {
     return launch_vscode();
+  }
+
+  // Handle Chrome separately due to dynamic resolution
+  if target_id == "chrome" {
+    return launch_chrome();
   }
 
   // Check real registry first
