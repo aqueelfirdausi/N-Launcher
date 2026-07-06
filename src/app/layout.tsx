@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ background: "transparent" }}>
       <body className="antialiased bg-transparent selection:bg-cyan-500/30 selection:text-cyan-200">
         {children}
       </body>
