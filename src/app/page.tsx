@@ -41,6 +41,18 @@ export default function LauncherPage() {
     searchInputRef?.focus();
   }, [searchInputRef]);
 
+  // Helper to hide native window
+  const hideWindow = () => {
+    if (isNative) {
+      import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
+        getCurrentWindow().hide();
+      });
+    } else {
+      setToastMessage("Hiding window (Simulated)...");
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
   // Handle simulated action launches
   const triggerAppLaunch = (app: AppItemType) => {
     if (isNative) {
@@ -102,9 +114,7 @@ export default function LauncherPage() {
           searchInputRef?.blur();
         } else if (isNative) {
           // Tier 3: Hide the Tauri window
-          import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
-            getCurrentWindow().hide();
-          });
+          hideWindow();
         }
       }
     };
@@ -156,7 +166,7 @@ export default function LauncherPage() {
           />
 
           {/* Bottom Utility Footer */}
-          <UtilityFooter />
+          <UtilityFooter onPowerClick={hideWindow} />
         </GlassPanel>
       </div>
 
