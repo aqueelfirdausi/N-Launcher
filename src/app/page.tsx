@@ -43,8 +43,25 @@ export default function LauncherPage() {
 
   // Handle simulated action launches
   const triggerAppLaunch = (app: AppItemType) => {
-    setToastMessage(`Launching ${app.name} (Simulated action)...`);
-    setTimeout(() => setToastMessage(null), 3000);
+    if (isNative) {
+      import("@tauri-apps/api/core").then(({ invoke }) => {
+        invoke<string>("launch_app", { targetId: app.id })
+          .then((res) => {
+            setToastMessage(res);
+            setTimeout(() => setToastMessage(null), 3000);
+          })
+          .catch((err) => {
+            setToastMessage(`Error: ${err}`);
+            setTimeout(() => setToastMessage(null), 3000);
+          });
+      }).catch((err) => {
+        setToastMessage(`Failed to load Tauri core: ${err}`);
+        setTimeout(() => setToastMessage(null), 3000);
+      });
+    } else {
+      setToastMessage(`Launching ${app.name} (Simulated action)...`);
+      setTimeout(() => setToastMessage(null), 3000);
+    }
   };
 
   // Keyboard navigation event handler
