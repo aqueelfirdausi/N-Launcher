@@ -72,8 +72,18 @@ export default function LauncherPage() {
         }
       } else if (e.key === "Escape") {
         e.preventDefault();
-        setSearchQuery("");
-        searchInputRef?.blur();
+        if (searchQuery) {
+          // Tier 1: Clear search text
+          setSearchQuery("");
+        } else if (document.activeElement === searchInputRef) {
+          // Tier 2: Blur the search input
+          searchInputRef?.blur();
+        } else if (isNative) {
+          // Tier 3: Hide the Tauri window
+          import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
+            getCurrentWindow().hide();
+          });
+        }
       }
     };
 
