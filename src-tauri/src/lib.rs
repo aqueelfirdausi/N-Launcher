@@ -1,6 +1,16 @@
 use tauri::Manager;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+
+fn show_and_focus_main_window(app: &tauri::AppHandle) {
+  if let Some(window) = app.get_webview_window("main") {
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
+  }
+}
+
 
 struct AppTarget {
   id: &'static str,
@@ -143,6 +153,17 @@ fn launch_app(target_id: String) -> Result<String, String> {
 pub fn run() {
   tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![launch_app])
+    .on_menu_event(|app, event| {
+      match event.id.0.as_str() {
+        "show" => {
+          show_and_focus_main_window(app);
+        }
+        "quit" => {
+          app.exit(0);
+        }
+        _ => {}
+      }
+    })
     .setup(|app| {
       #[cfg(debug_assertions)]
       {
@@ -157,12 +178,22 @@ pub fn run() {
         window.show().unwrap();
       }
 
+      // Create a minimal system tray right-click menu
+      let show_item = MenuItem::with_id(app, "show", "Show Launcher", true, None::<&str>)?;
+      let separator = PredefinedMenuItem::separator(app)?;
+      let quit_item = MenuItem::with_id(app, "quit", "Quit N Launcher", true, None::<&str>)?;
+      let tray_menu = Menu::new(app)?;
+      tray_menu.append(&show_item)?;
+      tray_menu.append(&separator)?;
+      tray_menu.append(&quit_item)?;
+
       // Build a minimal system tray icon.
       // Left-click (button up) shows and focuses the main launcher window,
       // recovering from the Escape-hide state.
       let _tray = TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
         .tooltip("N Launcher")
+        .menu(&tray_menu)
         .on_tray_icon_event(|tray, event| {
           if let TrayIconEvent::Click {
             button: MouseButton::Left,
@@ -170,12 +201,7 @@ pub fn run() {
             ..
           } = event
           {
-            let app = tray.app_handle();
-            if let Some(window) = app.get_webview_window("main") {
-              let _ = window.unminimize();
-              let _ = window.show();
-              let _ = window.set_focus();
-            }
+            show_and_focus_main_window(tray.app_handle());
           }
         })
         .build(app)?;
@@ -185,11 +211,7 @@ pub fn run() {
         tauri_plugin_global_shortcut::Builder::new()
           .with_handler(|app, _shortcut, event| {
             if event.state() == ShortcutState::Pressed {
-              if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.show();
-                let _ = window.set_focus();
-              }
+              show_and_focus_main_window(app);
             }
           })
           .build(),
