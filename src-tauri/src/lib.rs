@@ -1,4 +1,5 @@
 use tauri::Manager;
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
 struct AppTarget {
   id: &'static str,
@@ -155,8 +156,31 @@ pub fn run() {
         window.show().unwrap();
       }
 
+      // Build a minimal system tray icon.
+      // Left-click (button up) shows and focuses the main launcher window,
+      // recovering from the Escape-hide state.
+      let _tray = TrayIconBuilder::new()
+        .icon(app.default_window_icon().unwrap().clone())
+        .tooltip("N Launcher")
+        .on_tray_icon_event(|tray, event| {
+          if let TrayIconEvent::Click {
+            button: MouseButton::Left,
+            button_state: MouseButtonState::Up,
+            ..
+          } = event
+          {
+            let app = tray.app_handle();
+            if let Some(window) = app.get_webview_window("main") {
+              let _ = window.unminimize();
+              let _ = window.show();
+              let _ = window.set_focus();
+            }
+          }
+        })
+        .build(app)?;
+
       Ok(())
     })
     .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .expect("error while running tauri application")
 }
