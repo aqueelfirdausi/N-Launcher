@@ -1,5 +1,6 @@
 use tauri::Manager;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 struct AppTarget {
   id: &'static str,
@@ -179,8 +180,37 @@ pub fn run() {
         })
         .build(app)?;
 
+      // Register the global shortcut plugin
+      app.handle().plugin(
+        tauri_plugin_global_shortcut::Builder::new()
+          .with_handler(|app, _shortcut, event| {
+            if event.state() == ShortcutState::Pressed {
+              if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+              }
+            }
+          })
+          .build(),
+      )?;
+
+      // Register the Ctrl+Alt+Space shortcut
+      use std::str::FromStr;
+      match Shortcut::from_str("ctrl+alt+space") {
+        Ok(ctrl_alt_space) => {
+          if let Err(e) = app.global_shortcut().register(ctrl_alt_space) {
+            log::error!("Failed to register Ctrl+Alt+Space global shortcut: {}", e);
+          }
+        }
+        Err(e) => {
+          log::error!("Failed to parse Ctrl+Alt+Space shortcut: {}", e);
+        }
+      }
+
       Ok(())
     })
     .run(tauri::generate_context!())
     .expect("error while running tauri application")
 }
+
