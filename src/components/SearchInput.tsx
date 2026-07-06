@@ -5,7 +5,7 @@ interface SearchInputProps {
   value: string;
   onChange: (val: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  inputRef?: React.RefObject<HTMLInputElement | null>;
+  inputRef?: React.Ref<HTMLInputElement>;
 }
 
 export const SearchInput: React.FC<SearchInputProps> = ({ 

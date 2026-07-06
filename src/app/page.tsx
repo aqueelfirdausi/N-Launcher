@@ -13,7 +13,8 @@ export default function LauncherPage() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const [searchInputRef, setSearchInputRef] = useState<HTMLInputElement | null>(null);
+  const [isNative, setIsNative] = useState(false);
 
   // Filter apps list based on query
   const filteredApps = useMemo(() => {
@@ -30,6 +31,11 @@ export default function LauncherPage() {
     setActiveIndex(0);
   }, [filteredApps]);
 
+  // Detect Tauri native environment
+  useEffect(() => {
+    setIsNative((window as any).__TAURI_INTERNALS__ !== undefined);
+  }, []);
+
   // Handle simulated action launches
   const triggerAppLaunch = (app: AppItemType) => {
     setToastMessage(`Launching ${app.name} (Simulated action)...`);
@@ -41,13 +47,13 @@ export default function LauncherPage() {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       // Focus search automatically if user starts typing letters
       if (
-        document.activeElement !== searchInputRef.current && 
+        document.activeElement !== searchInputRef && 
         e.key.length === 1 && 
         !e.ctrlKey && 
         !e.altKey && 
         !e.metaKey
       ) {
-        searchInputRef.current?.focus();
+        searchInputRef?.focus();
         return;
       }
 
@@ -67,44 +73,46 @@ export default function LauncherPage() {
       } else if (e.key === "Escape") {
         e.preventDefault();
         setSearchQuery("");
-        searchInputRef.current?.blur();
+        searchInputRef?.blur();
       }
     };
 
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [filteredApps, activeIndex]);
+  }, [filteredApps, activeIndex, searchInputRef]);
 
   return (
-    <main className="w-screen h-screen relative overflow-hidden bg-[#0a0614] select-none flex items-center justify-center font-sans">
+    <main className={`w-screen h-screen relative overflow-hidden select-none flex items-center justify-center font-sans ${isNative ? "bg-transparent" : "bg-[#0a0614]"}`}>
       {/* 
         Windows 11 Mock Desktop Environment:
         An interactive simulated workspace displaying a deep violet / black ambient aurora backdrop 
         to show how the transparent launcher panel floats and blurs the desktop underneath.
       */}
-      <div 
-        className="absolute inset-0 w-full h-full"
-        style={{
-          background: `
-            radial-gradient(circle at 15% 25%, rgba(139, 92, 246, 0.15) 0%, transparent 45%),
-            radial-gradient(circle at 85% 75%, rgba(6, 182, 212, 0.12) 0%, transparent 50%),
-            radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
-            #0b0718
-          `
-        }}
-      >
-        {/* Subtle grid lines simulating a high-end designer mockup desktop background */}
-        <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#ffffff10_1px,transparent_1px),linear-gradient(to_bottom,#ffffff10_1px,transparent_1px)] bg-[size:4rem_4rem]" />
-      </div>
+      {!isNative && (
+        <div 
+          className="absolute inset-0 w-full h-full"
+          style={{
+            background: `
+              radial-gradient(circle at 15% 25%, rgba(139, 92, 246, 0.15) 0%, transparent 45%),
+              radial-gradient(circle at 85% 75%, rgba(6, 182, 212, 0.12) 0%, transparent 50%),
+              radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
+              #0b0718
+            `
+          }}
+        >
+          {/* Subtle grid lines simulating a high-end designer mockup desktop background */}
+          <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#ffffff10_1px,transparent_1px),linear-gradient(to_bottom,#ffffff10_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+        </div>
+      )}
 
-      {/* Floating launcher panel positioned absolute left-8 top-8 to prevent any top cropping */}
-      <div className="absolute left-8 top-8 z-10 animate-fade-in duration-700">
+      {/* Floating launcher panel positioned absolute left-8 top-8 in browser, left-0 top-0 in Tauri native */}
+      <div className={`absolute z-10 ${isNative ? "left-0 top-0" : "left-8 top-8 animate-fade-in duration-700"}`}>
         <GlassPanel>
           {/* Top Search Zone */}
           <SearchInput 
             value={searchQuery} 
             onChange={setSearchQuery} 
-            inputRef={searchInputRef}
+            inputRef={setSearchInputRef}
           />
 
           {/* Middle App Listing */}
@@ -121,11 +129,13 @@ export default function LauncherPage() {
       </div>
 
       {/* Simulated Windows 11 Taskbar (Blank translucent strip at the bottom) */}
-      <div className="absolute bottom-0 left-0 right-0 h-12 bg-black/45 backdrop-blur-md border-t border-white/[0.04] z-20" />
+      {!isNative && (
+        <div className="absolute bottom-0 left-0 right-0 h-12 bg-black/45 backdrop-blur-md border-t border-white/[0.04] z-20" />
+      )}
 
       {/* Launcher Toast Notifications */}
       {toastMessage && (
-        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 backdrop-blur-md text-emerald-200 text-[12px] px-6 py-3 rounded-full shadow-[0_10px_30px_-5px_rgba(16,185,129,0.3)] animate-bounce z-30">
+        <div className={`absolute left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 backdrop-blur-md text-emerald-200 text-[12px] px-6 py-3 rounded-full shadow-[0_10px_30px_-5px_rgba(16,185,129,0.3)] animate-bounce z-30 ${isNative ? "bottom-4" : "bottom-16"}`}>
           {toastMessage}
         </div>
       )}
