@@ -19,10 +19,52 @@ const REAL_TARGETS: &[AppTarget] = &[
   },
 ];
 
-const MOCK_TARGETS: &[&'static str] = &["vscode", "chrome", "spotify"];
+const MOCK_TARGETS: &[&'static str] = &["chrome", "spotify"];
+
+fn resolve_vscode_path() -> Option<std::path::PathBuf> {
+  // A. User install path: %LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe
+  if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+    let path = std::path::Path::new(&local_app_data)
+      .join("Programs")
+      .join("Microsoft VS Code")
+      .join("Code.exe");
+    if path.exists() {
+      return Some(path);
+    }
+  }
+
+  // B. System install path: C:\Program Files\Microsoft VS Code\Code.exe
+  let system_path = std::path::Path::new(r"C:\Program Files\Microsoft VS Code\Code.exe");
+  if system_path.exists() {
+    return Some(system_path.to_path_buf());
+  }
+
+  None
+}
+
+fn launch_vscode() -> Result<String, String> {
+  if let Some(path) = resolve_vscode_path() {
+    std::process::Command::new(path)
+      .spawn()
+      .map_err(|e| format!("Failed to launch VS Code: {}", e))?;
+    return Ok("Opened VS Code".to_string());
+  }
+
+  // C. Fallback to PATH: code.cmd
+  std::process::Command::new("code.cmd")
+    .spawn()
+    .map_err(|_| "VS Code executable not found".to_string())?;
+
+  Ok("Opened VS Code".to_string())
+}
 
 #[tauri::command]
 fn launch_app(target_id: String) -> Result<String, String> {
+  // Handle VS Code separately due to dynamic resolution
+  if target_id == "vscode" {
+    return launch_vscode();
+  }
+
   // Check real registry first
   if let Some(target) = REAL_TARGETS.iter().find(|t| t.id == target_id) {
     std::process::Command::new(target.program)
