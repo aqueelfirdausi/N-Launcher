@@ -3,7 +3,13 @@ use tauri::Manager;
 #[tauri::command]
 fn launch_app(target_id: String) -> Result<String, String> {
   match target_id.as_str() {
-    "vscode" | "terminal" | "chrome" | "files" | "spotify" => {
+    "files" => {
+      std::process::Command::new("explorer.exe")
+        .spawn()
+        .map_err(|e| format!("Failed to launch File Explorer: {}", e))?;
+      Ok("Opened File Explorer".to_string())
+    }
+    "vscode" | "terminal" | "chrome" | "spotify" => {
       println!("Mock launch accepted: {}", target_id);
       Ok(format!("Mock launch accepted: {}", target_id))
     }
