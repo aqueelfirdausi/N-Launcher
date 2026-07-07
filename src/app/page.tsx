@@ -169,7 +169,11 @@ export default function LauncherPage() {
 
       {/* Floating launcher panel positioned absolute left-8 top-8 in browser, left-0 top-0 in Tauri native */}
       <div className={`absolute z-10 ${isNative ? "left-0 top-0" : "left-8 top-8 animate-fade-in duration-700"}`}>
-        <GlassPanel>
+        <GlassPanel
+          themePreset={settings.themePreset}
+          panelOpacity={settings.panelOpacity}
+          glassIntensity={settings.glassIntensity}
+        >
           {/* Top Search Zone */}
           <SearchInput 
             value={searchQuery} 
@@ -183,6 +187,7 @@ export default function LauncherPage() {
             activeIndex={activeIndex} 
             setActiveIndex={setActiveIndex}
             onAppClick={triggerAppLaunch}
+            uiDensity={settings.uiDensity}
           />
 
           {/* Bottom Utility Footer */}

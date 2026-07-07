@@ -15,7 +15,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   inputRef 
 }) => {
   return (
-    <div className="relative flex items-center w-full px-3.5 py-2 rounded-lg bg-white/5 border border-white/5 focus-within:border-violet-500/50 transition-all duration-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
+    <div className="search-input-wrapper relative flex items-center w-full px-3.5 py-2 rounded-lg bg-white/5 border border-white/5 transition-all duration-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
       <AppIcon 
         name="Search" 
         className="text-white/40 mr-2.5 transition-colors duration-300 focus-within:text-violet-400" 

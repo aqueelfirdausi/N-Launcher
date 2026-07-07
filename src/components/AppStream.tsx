@@ -2,18 +2,23 @@ import React from "react";
 import { AppItemType } from "../lib/types";
 import { AppItem } from "./AppItem";
 
+import { UiDensity } from "../lib/settings";
+import { clsx } from "clsx";
+
 interface AppStreamProps {
   apps: AppItemType[];
   activeIndex: number;
   setActiveIndex: (index: number) => void;
   onAppClick: (app: AppItemType) => void;
+  uiDensity: UiDensity;
 }
 
 export const AppStream: React.FC<AppStreamProps> = ({ 
   apps, 
   activeIndex, 
   setActiveIndex,
-  onAppClick
+  onAppClick,
+  uiDensity
 }) => {
   if (apps.length === 0) {
     return (
@@ -24,7 +29,10 @@ export const AppStream: React.FC<AppStreamProps> = ({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto scrollbar-hide py-4 space-y-1.5 pr-2">
+    <div className={clsx(
+      "flex-1 overflow-y-auto scrollbar-hide pr-2 transition-all duration-300",
+      uiDensity === "compact" ? "py-2 space-y-1" : "py-4 space-y-1.5"
+    )}>
       {apps.map((app, index) => (
         <AppItem
           key={app.id}
@@ -32,6 +40,7 @@ export const AppStream: React.FC<AppStreamProps> = ({
           isActive={index === activeIndex}
           onHover={() => setActiveIndex(index)}
           onClick={() => onAppClick(app)}
+          uiDensity={uiDensity}
         />
       ))}
     </div>

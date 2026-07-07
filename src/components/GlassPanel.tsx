@@ -1,15 +1,35 @@
 import React from "react";
 import { ScrubberRail } from "./ScrubberRail";
+import { ThemePreset, GlassIntensity } from "../lib/settings";
 
 interface GlassPanelProps {
   children: React.ReactNode;
+  themePreset: ThemePreset;
+  panelOpacity: number;
+  glassIntensity: GlassIntensity;
 }
 
-export const GlassPanel: React.FC<GlassPanelProps> = ({ children }) => {
+export const GlassPanel: React.FC<GlassPanelProps> = ({
+  children,
+  themePreset,
+  panelOpacity,
+  glassIntensity
+}) => {
+  const blurValue =
+    glassIntensity === "subtle" ? "12px" :
+    glassIntensity === "strong" ? "40px" :
+    "28px";
+
   return (
-    <div 
-      className="glass-vessel w-[340px] h-[840px] max-h-[calc(100vh-64px)] flex-shrink-0 flex overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] border-white/10 select-none relative"
-      style={{ width: "340px", minWidth: "340px" }}
+    <div
+      className="glass-vessel w-[340px] h-[840px] max-h-[calc(100vh-64px)] flex-shrink-0 flex overflow-hidden select-none relative transition-all duration-300"
+      style={{
+        width: "340px",
+        minWidth: "340px",
+        "--panel-opacity": panelOpacity,
+        "--glass-blur": blurValue,
+      } as React.CSSProperties}
+      data-theme={themePreset}
     >
       {/* Invisible drag handle for native Tauri window repositioning */}
       <div data-tauri-drag-region className="absolute top-0 left-0 right-0 h-3 z-50" />
