@@ -1,6 +1,6 @@
-import React from "react";
-import { X, Sliders, Palette, Eye, LayoutGrid, Keyboard } from "lucide-react";
-import { NSettings, ThemePreset, GlassIntensity, UiDensity } from "../lib/settings";
+import React, { useState, useEffect } from "react";
+import { X, Sliders, Palette, Eye, LayoutGrid, Keyboard, CheckCircle2, AlertTriangle, RotateCcw } from "lucide-react";
+import { NSettings, ThemePreset, GlassIntensity, UiDensity, saveSettings, resetSettings } from "../lib/settings";
 
 interface SettingsModalProps {
   settings: NSettings;
@@ -13,25 +13,70 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSettingsChange,
   onClose,
 }) => {
+  const [modalSettings, setModalSettings] = useState<NSettings>(settings);
+  const [statusMessage, setStatusMessage] = useState<{ text: string; isError: boolean } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Keep modal settings in sync with parent settings (especially when parent loads or resets)
+  useEffect(() => {
+    setModalSettings(settings);
+  }, [settings]);
+
+  // Success messages fade out after 3 seconds
+  useEffect(() => {
+    if (statusMessage && !statusMessage.isError) {
+      const timer = setTimeout(() => {
+        setStatusMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [statusMessage]);
+
   const handleThemeChange = (themePreset: ThemePreset) => {
-    onSettingsChange({ ...settings, themePreset });
+    setModalSettings((prev) => ({ ...prev, themePreset }));
   };
 
   const handleOpacityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const panelOpacity = parseFloat(e.target.value);
-    onSettingsChange({ ...settings, panelOpacity });
+    setModalSettings((prev) => ({ ...prev, panelOpacity }));
   };
 
   const handleIntensityChange = (glassIntensity: GlassIntensity) => {
-    onSettingsChange({ ...settings, glassIntensity });
+    setModalSettings((prev) => ({ ...prev, glassIntensity }));
   };
 
   const handleDensityChange = (uiDensity: UiDensity) => {
-    onSettingsChange({ ...settings, uiDensity });
+    setModalSettings((prev) => ({ ...prev, uiDensity }));
   };
 
   const handleHotkeyToggle = () => {
-    onSettingsChange({ ...settings, hotkeyHintVisible: !settings.hotkeyHintVisible });
+    setModalSettings((prev) => ({ ...prev, hotkeyHintVisible: !prev.hotkeyHintVisible }));
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setStatusMessage(null);
+    try {
+      const saved = await saveSettings(modalSettings);
+      onSettingsChange(saved);
+      setStatusMessage({ text: "Settings saved successfully", isError: false });
+    } catch (err) {
+      setStatusMessage({ text: `Failed to save settings: ${err}`, isError: true });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setStatusMessage(null);
+    try {
+      const reset = await resetSettings();
+      onSettingsChange(reset);
+      setModalSettings(reset);
+      setStatusMessage({ text: "Settings reset to defaults", isError: false });
+    } catch (err) {
+      setStatusMessage({ text: `Failed to reset: ${err}`, isError: true });
+    }
   };
 
   return (
@@ -64,7 +109,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </label>
           <div className="grid grid-cols-3 gap-1.5">
             {(["defaultViolet", "minimalDark", "softGlass"] as ThemePreset[]).map((preset) => {
-              const isActive = settings.themePreset === preset;
+              const isActive = modalSettings.themePreset === preset;
               const labels: Record<ThemePreset, string> = {
                 defaultViolet: "Violet",
                 minimalDark: "Dark",
@@ -96,7 +141,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               Panel Opacity
             </label>
             <span className="text-[11px] text-violet-400 font-mono font-medium">
-              {Math.round(settings.panelOpacity * 100)}%
+              {Math.round(modalSettings.panelOpacity * 100)}%
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -105,7 +150,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               min="0.5"
               max="1.0"
               step="0.01"
-              value={settings.panelOpacity}
+              value={modalSettings.panelOpacity}
               onChange={handleOpacityChange}
               className="flex-1 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-violet-500"
             />
@@ -120,7 +165,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </label>
           <div className="grid grid-cols-3 gap-1.5">
             {(["subtle", "standard", "strong"] as GlassIntensity[]).map((intensity) => {
-              const isActive = settings.glassIntensity === intensity;
+              const isActive = modalSettings.glassIntensity === intensity;
               return (
                 <button
                   key={intensity}
@@ -147,7 +192,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </label>
           <div className="grid grid-cols-2 gap-1.5">
             {(["comfortable", "compact"] as UiDensity[]).map((density) => {
-              const isActive = settings.uiDensity === density;
+              const isActive = modalSettings.uiDensity === density;
               return (
                 <button
                   key={density}
@@ -176,12 +221,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             type="button"
             onClick={handleHotkeyToggle}
             className={`w-8 h-4 rounded-full transition-colors relative cursor-pointer ${
-              settings.hotkeyHintVisible ? "bg-violet-500" : "bg-white/10"
+              modalSettings.hotkeyHintVisible ? "bg-violet-500" : "bg-white/10"
             }`}
           >
             <div
               className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
-                settings.hotkeyHintVisible ? "left-4.5" : "left-0.5"
+                modalSettings.hotkeyHintVisible ? "left-4.5" : "left-0.5"
               }`}
             />
           </button>
@@ -203,18 +248,51 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
       </div>
 
-      {/* Disclaimers & Footer Action */}
+      {/* Disclaimers & Action Footer */}
       <div className="mt-4 pt-3.5 border-t border-white/5 space-y-3">
-        <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-          <p className="text-[10px] text-amber-200/80 leading-normal text-left">
-            ⚠️ Settings are UI-only in this phase and are not saved yet.
-          </p>
+        {/* Status Message Panel */}
+        {statusMessage && (
+          <div className={`p-2.5 rounded-lg border flex items-start gap-2 text-left animate-fade-in ${
+            statusMessage.isError
+              ? "bg-red-500/10 border-red-500/20 text-red-200"
+              : "bg-emerald-500/10 border-emerald-500/20 text-emerald-200"
+          }`}>
+            {statusMessage.isError ? (
+              <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
+            ) : (
+              <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+            )}
+            <p className="text-[10px] leading-normal">{statusMessage.text}</p>
+          </div>
+        )}
+
+        {/* Buttons Row */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="text-[11px] font-medium py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            title="Reset Settings to Defaults"
+          >
+            <RotateCcw size={12} />
+            Reset Defaults
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="text-[11px] font-medium py-2 rounded-lg bg-violet-600 hover:bg-violet-500 active:scale-98 text-white transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-[0_4px_12px_rgba(109,40,217,0.3)] disabled:opacity-50"
+          >
+            {isSaving ? "Saving..." : "Save Settings"}
+          </button>
         </div>
+
         <button
           onClick={onClose}
-          className="w-full text-[12px] font-medium py-2 rounded-lg bg-violet-600 hover:bg-violet-500 active:scale-98 text-white transition-all cursor-pointer shadow-[0_4px_12px_rgba(109,40,217,0.3)]"
+          className="w-full text-[11px] font-medium py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 transition-all cursor-pointer border border-white/5"
         >
-          Done
+          Close
         </button>
       </div>
     </div>

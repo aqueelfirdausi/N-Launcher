@@ -1,238 +1,242 @@
-use tauri::Manager;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::Manager;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
+mod settings;
+
 fn show_and_focus_main_window(app: &tauri::AppHandle) {
-  if let Some(window) = app.get_webview_window("main") {
-    let _ = window.unminimize();
-    let _ = window.show();
-    let _ = window.set_focus();
-  }
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
 }
 
-
 struct AppTarget {
-  id: &'static str,
-  program: &'static str,
-  success_message: &'static str,
+    id: &'static str,
+    program: &'static str,
+    success_message: &'static str,
 }
 
 const REAL_TARGETS: &[AppTarget] = &[
-  AppTarget {
-    id: "files",
-    program: "explorer.exe",
-    success_message: "Opened File Explorer",
-  },
-  AppTarget {
-    id: "terminal",
-    program: "wt.exe",
-    success_message: "Opened Windows Terminal",
-  },
-  AppTarget {
-    id: "notepad",
-    program: "notepad.exe",
-    success_message: "Opened Notepad",
-  },
+    AppTarget {
+        id: "files",
+        program: "explorer.exe",
+        success_message: "Opened File Explorer",
+    },
+    AppTarget {
+        id: "terminal",
+        program: "wt.exe",
+        success_message: "Opened Windows Terminal",
+    },
+    AppTarget {
+        id: "notepad",
+        program: "notepad.exe",
+        success_message: "Opened Notepad",
+    },
 ];
 
 const MOCK_TARGETS: &[&'static str] = &[];
 
 fn resolve_vscode_path() -> Option<std::path::PathBuf> {
-  // A. User install path: %LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe
-  if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
-    let path = std::path::Path::new(&local_app_data)
-      .join("Programs")
-      .join("Microsoft VS Code")
-      .join("Code.exe");
-    if path.exists() {
-      return Some(path);
+    // A. User install path: %LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        let path = std::path::Path::new(&local_app_data)
+            .join("Programs")
+            .join("Microsoft VS Code")
+            .join("Code.exe");
+        if path.exists() {
+            return Some(path);
+        }
     }
-  }
 
-  // B. System install path: C:\Program Files\Microsoft VS Code\Code.exe
-  let system_path = std::path::Path::new(r"C:\Program Files\Microsoft VS Code\Code.exe");
-  if system_path.exists() {
-    return Some(system_path.to_path_buf());
-  }
+    // B. System install path: C:\Program Files\Microsoft VS Code\Code.exe
+    let system_path = std::path::Path::new(r"C:\Program Files\Microsoft VS Code\Code.exe");
+    if system_path.exists() {
+        return Some(system_path.to_path_buf());
+    }
 
-  None
+    None
 }
 
 fn launch_vscode() -> Result<String, String> {
-  if let Some(path) = resolve_vscode_path() {
-    std::process::Command::new(path)
-      .spawn()
-      .map_err(|e| format!("Failed to launch VS Code: {}", e))?;
-    return Ok("Opened VS Code".to_string());
-  }
+    if let Some(path) = resolve_vscode_path() {
+        std::process::Command::new(path)
+            .spawn()
+            .map_err(|e| format!("Failed to launch VS Code: {}", e))?;
+        return Ok("Opened VS Code".to_string());
+    }
 
-  // C. Fallback to PATH: code.cmd
-  std::process::Command::new("code.cmd")
-    .spawn()
-    .map_err(|_| "VS Code executable not found".to_string())?;
+    // C. Fallback to PATH: code.cmd
+    std::process::Command::new("code.cmd")
+        .spawn()
+        .map_err(|_| "VS Code executable not found".to_string())?;
 
-  Ok("Opened VS Code".to_string())
+    Ok("Opened VS Code".to_string())
 }
 
 fn resolve_chrome_path() -> Option<std::path::PathBuf> {
-  // A. System 64-bit install path
-  let path_64 = std::path::Path::new(r"C:\Program Files\Google\Chrome\Application\chrome.exe");
-  if path_64.exists() {
-    return Some(path_64.to_path_buf());
-  }
-
-  // B. System 32-bit install path
-  let path_32 = std::path::Path::new(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe");
-  if path_32.exists() {
-    return Some(path_32.to_path_buf());
-  }
-
-  // C. User LocalAppData install path
-  if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
-    let path = std::path::Path::new(&local_app_data)
-      .join("Google")
-      .join("Chrome")
-      .join("Application")
-      .join("chrome.exe");
-    if path.exists() {
-      return Some(path);
+    // A. System 64-bit install path
+    let path_64 = std::path::Path::new(r"C:\Program Files\Google\Chrome\Application\chrome.exe");
+    if path_64.exists() {
+        return Some(path_64.to_path_buf());
     }
-  }
 
-  None
+    // B. System 32-bit install path
+    let path_32 =
+        std::path::Path::new(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe");
+    if path_32.exists() {
+        return Some(path_32.to_path_buf());
+    }
+
+    // C. User LocalAppData install path
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        let path = std::path::Path::new(&local_app_data)
+            .join("Google")
+            .join("Chrome")
+            .join("Application")
+            .join("chrome.exe");
+        if path.exists() {
+            return Some(path);
+        }
+    }
+
+    None
 }
 
 fn launch_chrome() -> Result<String, String> {
-  if let Some(path) = resolve_chrome_path() {
-    std::process::Command::new(path)
-      .spawn()
-      .map_err(|e| format!("Failed to launch Chrome: {}", e))?;
-    return Ok("Opened Chrome".to_string());
-  }
+    if let Some(path) = resolve_chrome_path() {
+        std::process::Command::new(path)
+            .spawn()
+            .map_err(|e| format!("Failed to launch Chrome: {}", e))?;
+        return Ok("Opened Chrome".to_string());
+    }
 
-  // D. Fallback to PATH: chrome.exe
-  std::process::Command::new("chrome.exe")
-    .spawn()
-    .map_err(|_| "Chrome executable not found".to_string())?;
+    // D. Fallback to PATH: chrome.exe
+    std::process::Command::new("chrome.exe")
+        .spawn()
+        .map_err(|_| "Chrome executable not found".to_string())?;
 
-  Ok("Opened Chrome".to_string())
+    Ok("Opened Chrome".to_string())
 }
 
 #[tauri::command]
 fn launch_app(target_id: String) -> Result<String, String> {
-  // Handle VS Code separately due to dynamic resolution
-  if target_id == "vscode" {
-    return launch_vscode();
-  }
+    // Handle VS Code separately due to dynamic resolution
+    if target_id == "vscode" {
+        return launch_vscode();
+    }
 
-  // Handle Chrome separately due to dynamic resolution
-  if target_id == "chrome" {
-    return launch_chrome();
-  }
+    // Handle Chrome separately due to dynamic resolution
+    if target_id == "chrome" {
+        return launch_chrome();
+    }
 
-  // Check real registry first
-  if let Some(target) = REAL_TARGETS.iter().find(|t| t.id == target_id) {
-    std::process::Command::new(target.program)
-      .spawn()
-      .map_err(|e| format!("Failed to launch {}: {}", target.program, e))?;
-    return Ok(target.success_message.to_string());
-  }
+    // Check real registry first
+    if let Some(target) = REAL_TARGETS.iter().find(|t| t.id == target_id) {
+        std::process::Command::new(target.program)
+            .spawn()
+            .map_err(|e| format!("Failed to launch {}: {}", target.program, e))?;
+        return Ok(target.success_message.to_string());
+    }
 
-  // Check mock targets second
-  if MOCK_TARGETS.contains(&target_id.as_str()) {
-    println!("Mock launch accepted: {}", target_id);
-    return Ok(format!("Mock launch accepted: {}", target_id));
-  }
+    // Check mock targets second
+    if MOCK_TARGETS.contains(&target_id.as_str()) {
+        println!("Mock launch accepted: {}", target_id);
+        return Ok(format!("Mock launch accepted: {}", target_id));
+    }
 
-  // Unknown targets
-  Err("Unknown target id".to_string())
+    // Unknown targets
+    Err("Unknown target id".to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![launch_app])
-    .on_menu_event(|app, event| {
-      match event.id.0.as_str() {
-        "show" => {
-          show_and_focus_main_window(app);
-        }
-        "quit" => {
-          app.exit(0);
-        }
-        _ => {}
-      }
-    })
-    .setup(|app| {
-      #[cfg(debug_assertions)]
-      {
-        app.handle().plugin(
-          tauri_plugin_log::Builder::default()
-            .level(log::LevelFilter::Info)
-            .build(),
-        )?;
-      }
-
-      if let Some(window) = app.get_webview_window("main") {
-        window.show().unwrap();
-      }
-
-      // Create a minimal system tray right-click menu
-      let show_item = MenuItem::with_id(app, "show", "Show Launcher", true, None::<&str>)?;
-      let separator = PredefinedMenuItem::separator(app)?;
-      let quit_item = MenuItem::with_id(app, "quit", "Quit N Launcher", true, None::<&str>)?;
-      let tray_menu = Menu::new(app)?;
-      tray_menu.append(&show_item)?;
-      tray_menu.append(&separator)?;
-      tray_menu.append(&quit_item)?;
-
-      // Build a minimal system tray icon.
-      // Left-click (button up) shows and focuses the main launcher window,
-      // recovering from the Escape-hide state.
-      let _tray = TrayIconBuilder::new()
-        .icon(app.default_window_icon().unwrap().clone())
-        .tooltip("N Launcher")
-        .menu(&tray_menu)
-        .on_tray_icon_event(|tray, event| {
-          if let TrayIconEvent::Click {
-            button: MouseButton::Left,
-            button_state: MouseButtonState::Up,
-            ..
-          } = event
-          {
-            show_and_focus_main_window(tray.app_handle());
-          }
-        })
-        .build(app)?;
-
-      // Register the global shortcut plugin
-      app.handle().plugin(
-        tauri_plugin_global_shortcut::Builder::new()
-          .with_handler(|app, _shortcut, event| {
-            if event.state() == ShortcutState::Pressed {
-              show_and_focus_main_window(app);
+    tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![
+            launch_app,
+            settings::get_settings,
+            settings::save_settings,
+            settings::reset_settings
+        ])
+        .on_menu_event(|app, event| match event.id.0.as_str() {
+            "show" => {
+                show_and_focus_main_window(app);
             }
-          })
-          .build(),
-      )?;
+            "quit" => {
+                app.exit(0);
+            }
+            _ => {}
+        })
+        .setup(|app| {
+            #[cfg(debug_assertions)]
+            {
+                app.handle().plugin(
+                    tauri_plugin_log::Builder::default()
+                        .level(log::LevelFilter::Info)
+                        .build(),
+                )?;
+            }
 
-      // Register the Ctrl+Alt+Space shortcut
-      use std::str::FromStr;
-      match Shortcut::from_str("ctrl+alt+space") {
-        Ok(ctrl_alt_space) => {
-          if let Err(e) = app.global_shortcut().register(ctrl_alt_space) {
-            log::error!("Failed to register Ctrl+Alt+Space global shortcut: {}", e);
-          }
-        }
-        Err(e) => {
-          log::error!("Failed to parse Ctrl+Alt+Space shortcut: {}", e);
-        }
-      }
+            if let Some(window) = app.get_webview_window("main") {
+                window.show().unwrap();
+            }
 
-      Ok(())
-    })
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application")
+            // Create a minimal system tray right-click menu
+            let show_item = MenuItem::with_id(app, "show", "Show Launcher", true, None::<&str>)?;
+            let separator = PredefinedMenuItem::separator(app)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit N Launcher", true, None::<&str>)?;
+            let tray_menu = Menu::new(app)?;
+            tray_menu.append(&show_item)?;
+            tray_menu.append(&separator)?;
+            tray_menu.append(&quit_item)?;
+
+            // Build a minimal system tray icon.
+            // Left-click (button up) shows and focuses the main launcher window,
+            // recovering from the Escape-hide state.
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("N Launcher")
+                .menu(&tray_menu)
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        show_and_focus_main_window(tray.app_handle());
+                    }
+                })
+                .build(app)?;
+
+            // Register the global shortcut plugin
+            app.handle().plugin(
+                tauri_plugin_global_shortcut::Builder::new()
+                    .with_handler(|app, _shortcut, event| {
+                        if event.state() == ShortcutState::Pressed {
+                            show_and_focus_main_window(app);
+                        }
+                    })
+                    .build(),
+            )?;
+
+            // Register the Ctrl+Alt+Space shortcut
+            use std::str::FromStr;
+            match Shortcut::from_str("ctrl+alt+space") {
+                Ok(ctrl_alt_space) => {
+                    if let Err(e) = app.global_shortcut().register(ctrl_alt_space) {
+                        log::error!("Failed to register Ctrl+Alt+Space global shortcut: {}", e);
+                    }
+                }
+                Err(e) => {
+                    log::error!("Failed to parse Ctrl+Alt+Space shortcut: {}", e);
+                }
+            }
+
+            Ok(())
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application")
 }
-

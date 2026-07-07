@@ -40,6 +40,20 @@ export default function LauncherPage() {
     setIsNative((window as any).__TAURI_INTERNALS__ !== undefined);
   }, []);
 
+  // Load settings from backend on initialization
+  useEffect(() => {
+    import("../lib/settings").then(({ getSettings }) => {
+      getSettings()
+        .then((loadedSettings) => {
+          setSettings(loadedSettings);
+        })
+        .catch((err) => {
+          setToastMessage(`Failed to load settings: ${err}`);
+          setTimeout(() => setToastMessage(null), 4000);
+        });
+    });
+  }, [isNative]);
+
   // Auto-focus search input when it becomes available
   useEffect(() => {
     searchInputRef?.focus();
