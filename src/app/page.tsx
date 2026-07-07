@@ -7,6 +7,8 @@ import { GlassPanel } from "../components/GlassPanel";
 import { SearchInput } from "../components/SearchInput";
 import { AppStream } from "../components/AppStream";
 import { UtilityFooter } from "../components/UtilityFooter";
+import { SettingsModal } from "../components/SettingsModal";
+import { DEFAULT_SETTINGS, NSettings } from "../lib/settings";
 
 export default function LauncherPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,6 +17,8 @@ export default function LauncherPage() {
   
   const [searchInputRef, setSearchInputRef] = useState<HTMLInputElement | null>(null);
   const [isNative, setIsNative] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<NSettings>(DEFAULT_SETTINGS);
 
   // Filter apps list based on query
   const filteredApps = useMemo(() => {
@@ -106,7 +110,9 @@ export default function LauncherPage() {
         }
       } else if (e.key === "Escape") {
         e.preventDefault();
-        if (searchQuery) {
+        if (isSettingsOpen) {
+          setIsSettingsOpen(false);
+        } else if (searchQuery) {
           // Tier 1: Clear search text
           setSearchQuery("");
         } else if (document.activeElement === searchInputRef) {
@@ -121,7 +127,7 @@ export default function LauncherPage() {
 
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [filteredApps, activeIndex, searchInputRef]);
+  }, [filteredApps, activeIndex, searchInputRef, isSettingsOpen, isNative]);
 
   return (
     <main className={`w-screen h-screen relative overflow-hidden select-none flex items-center justify-center font-sans ${isNative ? "bg-transparent" : "bg-[#0a0614]"}`}>
@@ -166,7 +172,18 @@ export default function LauncherPage() {
           />
 
           {/* Bottom Utility Footer */}
-          <UtilityFooter onPowerClick={hideWindow} />
+          <UtilityFooter
+            onPowerClick={hideWindow}
+            onSettingsClick={() => setIsSettingsOpen(true)}
+          />
+
+          {isSettingsOpen && (
+            <SettingsModal
+              settings={settings}
+              onSettingsChange={setSettings}
+              onClose={() => setIsSettingsOpen(false)}
+            />
+          )}
         </GlassPanel>
       </div>
 

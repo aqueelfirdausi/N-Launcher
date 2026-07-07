@@ -3,9 +3,10 @@ import { Settings, Power } from "lucide-react";
 
 interface UtilityFooterProps {
   onPowerClick?: () => void;
+  onSettingsClick?: () => void;
 }
 
-export const UtilityFooter: React.FC<UtilityFooterProps> = ({ onPowerClick }) => {
+export const UtilityFooter: React.FC<UtilityFooterProps> = ({ onPowerClick, onSettingsClick }) => {
   return (
     <div className="flex items-center justify-between w-full pt-4 pb-1 px-1 border-t border-white/[0.04] mt-2 z-10">
       {/* Brand Identity / Circular N Badge on lower-left */}
@@ -24,6 +25,7 @@ export const UtilityFooter: React.FC<UtilityFooterProps> = ({ onPowerClick }) =>
         <button
           type="button"
           title="Settings"
+          onClick={onSettingsClick}
           className="flex items-center justify-center p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
         >
           <Settings size={16} />
