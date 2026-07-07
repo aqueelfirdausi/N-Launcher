@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "N Launcher",
         "width": 340,
         "height": 840,
@@ -23,7 +24,7 @@
         "transparent": true,
         "alwaysOnTop": true,
         "skipTaskbar": true,
-        "visible": false
+        "visible": true
       }
     ],
     "security": {
