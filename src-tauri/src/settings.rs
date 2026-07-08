@@ -28,6 +28,14 @@ pub enum UiDensity {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct NWorkspace {
+    pub id: String,
+    pub name: String,
+    pub app_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct NSettings {
     pub schema_version: u32,
@@ -38,6 +46,8 @@ pub struct NSettings {
     pub hotkey_hint_visible: bool,
     #[serde(default = "default_priority_apps")]
     pub priority_apps: Vec<String>,
+    #[serde(default)]
+    pub workspaces: Vec<NWorkspace>,
 }
 
 fn default_priority_apps() -> Vec<String> {
@@ -60,6 +70,23 @@ impl Default for NSettings {
             ui_density: UiDensity::Comfortable,
             hotkey_hint_visible: true,
             priority_apps: default_priority_apps(),
+            workspaces: vec![
+                NWorkspace {
+                    id: "development".to_string(),
+                    name: "Development".to_string(),
+                    app_ids: vec!["vscode".to_string(), "terminal".to_string()],
+                },
+                NWorkspace {
+                    id: "web".to_string(),
+                    name: "Web".to_string(),
+                    app_ids: vec!["chrome".to_string()],
+                },
+                NWorkspace {
+                    id: "business".to_string(),
+                    name: "Business".to_string(),
+                    app_ids: vec!["files".to_string(), "notepad".to_string()],
+                },
+            ],
         }
     }
 }
@@ -83,6 +110,21 @@ impl NSettings {
         self.priority_apps.retain(|id| {
             let trimmed = id.trim();
             !trimmed.is_empty() && seen.insert(trimmed.to_string())
+        });
+
+        // Sanitize workspaces
+        for ws in &mut self.workspaces {
+            ws.name = ws.name.trim().chars().take(32).collect();
+            let mut seen_apps = std::collections::HashSet::new();
+            ws.app_ids.retain(|id| {
+                let trimmed = id.trim();
+                !trimmed.is_empty() && seen_apps.insert(trimmed.to_string())
+            });
+        }
+        let mut seen_ws = std::collections::HashSet::new();
+        self.workspaces.retain(|ws| {
+            let trimmed_id = ws.id.trim();
+            !trimmed_id.is_empty() && seen_ws.insert(trimmed_id.to_string())
         });
     }
 }

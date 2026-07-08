@@ -2,6 +2,12 @@ export type ThemePreset = "defaultViolet" | "minimalDark" | "softGlass";
 export type GlassIntensity = "subtle" | "standard" | "strong";
 export type UiDensity = "comfortable" | "compact";
 
+export interface NWorkspace {
+  id: string;
+  name: string;
+  appIds: string[];
+}
+
 export interface NSettings {
   schemaVersion: number;
   themePreset: ThemePreset;
@@ -10,6 +16,7 @@ export interface NSettings {
   uiDensity: UiDensity;
   hotkeyHintVisible: boolean;
   priorityApps: string[];
+  workspaces: NWorkspace[];
 }
 
 export const DEFAULT_SETTINGS: NSettings = {
@@ -20,6 +27,23 @@ export const DEFAULT_SETTINGS: NSettings = {
   uiDensity: "comfortable",
   hotkeyHintVisible: true,
   priorityApps: ["vscode", "terminal", "chrome", "files", "notepad"],
+  workspaces: [
+    {
+      id: "development",
+      name: "Development",
+      appIds: ["vscode", "terminal"],
+    },
+    {
+      id: "web",
+      name: "Web",
+      appIds: ["chrome"],
+    },
+    {
+      id: "business",
+      name: "Business",
+      appIds: ["files", "notepad"],
+    },
+  ],
 };
 
 export const THEME_PRESET_OPTIONS: { value: ThemePreset; label: string }[] = [

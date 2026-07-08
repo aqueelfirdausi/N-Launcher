@@ -324,6 +324,7 @@ export default function LauncherPage() {
               settings={settings}
               onSettingsChange={setSettings}
               onClose={() => setIsSettingsOpen(false)}
+              allApps={apps}
             />
           )}
         </GlassPanel>
