@@ -137,13 +137,16 @@ export default function LauncherPage() {
   const triggerAppLaunch = (app: LauncherApp) => {
     if (isNative) {
       import("@tauri-apps/api/core").then(({ invoke }) => {
-        invoke<string>("launch_app", { targetId: app.id })
+        const cmd = app.source === "startMenu" ? "launch_discovered_app" : "launch_app";
+        const args = app.source === "startMenu" ? { appId: app.id } : { targetId: app.id };
+
+        invoke<string>(cmd, args)
           .then((res) => {
             setToastMessage(res);
             setTimeout(() => setToastMessage(null), 3000);
           })
           .catch((err) => {
-            setToastMessage(`Error: ${err}`);
+            setToastMessage(app.source === "startMenu" ? "This Start Menu app could not be launched safely." : `Error: ${err}`);
             setTimeout(() => setToastMessage(null), 3000);
           });
       }).catch((err) => {
@@ -159,12 +162,7 @@ export default function LauncherPage() {
   // Handle selection of a list item
   const handleItemSelection = (item: SelectableItem) => {
     if (item.type === "app") {
-      if (item.app.source === "startMenu") {
-        setToastMessage("Start Menu discovery is ready. Launch support will be added in a later safe phase.");
-        setTimeout(() => setToastMessage(null), 4000);
-      } else {
-        triggerAppLaunch(item.app);
-      }
+      triggerAppLaunch(item.app);
     } else if (item.type === "workspace") {
       const workspaceId = item.workspace.id;
       setExpandedWorkspaceIds((prev) =>

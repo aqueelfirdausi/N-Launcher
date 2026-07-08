@@ -227,6 +227,138 @@ fn discover_start_menu_apps() -> Result<Vec<DiscoveredApp>, String> {
     Ok(apps)
 }
 
+fn find_shortcut_by_id(dir: &std::path::Path, target_id: &str) -> Option<std::path::PathBuf> {
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if let Some(found) = find_shortcut_by_id(&path, target_id) {
+                    return Some(found);
+                }
+            } else if path.is_file() {
+                if let Some(ext) = path.extension() {
+                    if ext.to_ascii_lowercase() == "lnk" {
+                        if let Some(file_stem) = path.file_stem() {
+                            if let Some(name_str) = file_stem.to_str() {
+                                let normalized = name_str.trim().to_lowercase();
+                                if normalized.contains("uninstall")
+                                    || normalized.contains("help")
+                                    || normalized.contains("read me")
+                                    || normalized.contains("readme")
+                                {
+                                    continue;
+                                }
+                                let id = format!(
+                                    "lnk_{}",
+                                    normalized
+                                        .replace(" ", "_")
+                                        .replace("-", "_")
+                                        .replace(".", "_")
+                                );
+                                if id == target_id {
+                                    return Some(path);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn resolve_shortcut_path(app_id: &str) -> Option<std::path::PathBuf> {
+    // 1. System Start Menu
+    let system_start_menu =
+        std::path::Path::new(r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs");
+    if system_start_menu.exists() {
+        if let Some(path) = find_shortcut_by_id(system_start_menu, app_id) {
+            return Some(path);
+        }
+    }
+
+    // 2. User Start Menu
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        let user_start_menu = std::path::Path::new(&appdata)
+            .join("Microsoft")
+            .join("Windows")
+            .join("Start Menu")
+            .join("Programs");
+        if user_start_menu.exists() {
+            if let Some(path) = find_shortcut_by_id(&user_start_menu, app_id) {
+                return Some(path);
+            }
+        }
+    }
+
+    None
+}
+
+fn is_inside_approved_directories(path: &std::path::Path) -> bool {
+    let canonical_path = match path.canonicalize() {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+
+    let system_start_menu =
+        std::path::Path::new(r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs");
+    let system_canonical = system_start_menu.canonicalize().ok();
+
+    let user_canonical = if let Ok(appdata) = std::env::var("APPDATA") {
+        std::path::Path::new(&appdata)
+            .join("Microsoft")
+            .join("Windows")
+            .join("Start Menu")
+            .join("Programs")
+            .canonicalize()
+            .ok()
+    } else {
+        None
+    };
+
+    if let Some(sys_dir) = system_canonical {
+        if canonical_path.starts_with(sys_dir) {
+            return true;
+        }
+    }
+
+    if let Some(usr_dir) = user_canonical {
+        if canonical_path.starts_with(usr_dir) {
+            return true;
+        }
+    }
+
+    false
+}
+
+#[tauri::command]
+fn launch_discovered_app(app_id: String) -> Result<String, String> {
+    let lnk_path = match resolve_shortcut_path(&app_id) {
+        Some(path) => path,
+        None => return Err("Shortcut not found in Start Menu".to_string()),
+    };
+
+    if !lnk_path.exists() {
+        return Err("Shortcut file no longer exists".to_string());
+    }
+
+    if !is_inside_approved_directories(&lnk_path) {
+        return Err("Launch rejected: path is outside approved directories".to_string());
+    }
+
+    let path_str = lnk_path
+        .to_str()
+        .ok_or_else(|| "Invalid shortcut path encoding".to_string())?;
+
+    std::process::Command::new("cmd")
+        .args(&["/c", "start", "", path_str])
+        .spawn()
+        .map_err(|e| format!("OS failed to launch shortcut: {}", e))?;
+
+    Ok(format!("Successfully launched discovered app: {}", app_id))
+}
+
 #[tauri::command]
 fn launch_app(target_id: String) -> Result<String, String> {
     // Handle VS Code separately due to dynamic resolution
@@ -263,6 +395,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             launch_app,
             discover_start_menu_apps,
+            launch_discovered_app,
             settings::get_settings,
             settings::save_settings,
             settings::reset_settings
