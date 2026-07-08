@@ -31,6 +31,7 @@ export default function LauncherPage() {
   const [appLibraryState, setAppLibraryState] = useState(() => buildDefaultAppLibraryState());
   const [discoveredApps, setDiscoveredApps] = useState<LauncherApp[]>([]);
   const [expandedWorkspaceIds, setExpandedWorkspaceIds] = useState<string[]>([]);
+  const [isLaunching, setIsLaunching] = useState<string | null>(null);
 
   // Compute the full app list by merging built-in and discovered apps, applying priority status flags
   const apps = useMemo(() => {
@@ -135,32 +136,55 @@ export default function LauncherPage() {
 
   // Handle simulated action launches
   const triggerAppLaunch = (app: LauncherApp) => {
+    if (isLaunching) return;
+
+    setIsLaunching(app.id);
+    setToastMessage(`Launching ${app.name}...`);
+
     if (isNative) {
       import("@tauri-apps/api/core").then(({ invoke }) => {
         const cmd = app.source === "startMenu" ? "launch_discovered_app" : "launch_app";
         const args = app.source === "startMenu" ? { appId: app.id } : { targetId: app.id };
 
         invoke<string>(cmd, args)
-          .then((res) => {
-            setToastMessage(res);
-            setTimeout(() => setToastMessage(null), 3000);
+          .then(() => {
+            setToastMessage(`Opening ${app.name}...`);
+            setTimeout(() => {
+              setToastMessage(null);
+              setIsLaunching(null);
+            }, 3000);
           })
           .catch((err) => {
-            setToastMessage(app.source === "startMenu" ? "This Start Menu app could not be launched safely." : `Error: ${err}`);
-            setTimeout(() => setToastMessage(null), 3000);
+            setIsLaunching(null);
+            let safeMsg = "This app could not be opened safely.";
+            if (typeof err === "string") {
+              if (err.includes("not found") || err.includes("no longer exists")) {
+                safeMsg = "The Start Menu shortcut may have moved or is no longer available.";
+              } else if (err.includes("Access denied") || err.includes("Launch rejected")) {
+                safeMsg = "N Launcher blocked this launch for safety.";
+              }
+            }
+            setToastMessage(safeMsg);
+            setTimeout(() => setToastMessage(null), 4000);
           });
       }).catch((err) => {
-        setToastMessage(`Failed to load Tauri core: ${err}`);
+        setIsLaunching(null);
+        setToastMessage("Failed to initialize launch system.");
         setTimeout(() => setToastMessage(null), 3000);
       });
     } else {
-      setToastMessage(`Launching ${app.name} (Simulated action)...`);
-      setTimeout(() => setToastMessage(null), 3000);
+      setTimeout(() => {
+        setToastMessage(`Launched ${app.name} (Simulated)`);
+        setIsLaunching(null);
+        setTimeout(() => setToastMessage(null), 3000);
+      }, 1000);
     }
   };
 
   // Handle selection of a list item
   const handleItemSelection = (item: SelectableItem) => {
+    if (isLaunching) return;
+
     if (item.type === "app") {
       triggerAppLaunch(item.app);
     } else if (item.type === "workspace") {

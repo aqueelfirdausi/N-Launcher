@@ -336,27 +336,27 @@ fn is_inside_approved_directories(path: &std::path::Path) -> bool {
 fn launch_discovered_app(app_id: String) -> Result<String, String> {
     let lnk_path = match resolve_shortcut_path(&app_id) {
         Some(path) => path,
-        None => return Err("Shortcut not found in Start Menu".to_string()),
+        None => return Err("Start Menu shortcut not found.".to_string()),
     };
 
     if !lnk_path.exists() {
-        return Err("Shortcut file no longer exists".to_string());
+        return Err("Shortcut file no longer exists.".to_string());
     }
 
     if !is_inside_approved_directories(&lnk_path) {
-        return Err("Launch rejected: path is outside approved directories".to_string());
+        return Err("Access denied: path is outside approved directories.".to_string());
     }
 
     let path_str = lnk_path
         .to_str()
-        .ok_or_else(|| "Invalid shortcut path encoding".to_string())?;
+        .ok_or_else(|| "Invalid shortcut path encoding.".to_string())?;
 
     std::process::Command::new("cmd")
         .args(&["/c", "start", "", path_str])
         .spawn()
-        .map_err(|e| format!("OS failed to launch shortcut: {}", e))?;
+        .map_err(|_| "Operating system failed to execute application.".to_string())?;
 
-    Ok(format!("Successfully launched discovered app: {}", app_id))
+    Ok(format!("Successfully launched: {}", app_id))
 }
 
 #[tauri::command]
