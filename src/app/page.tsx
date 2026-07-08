@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { GlassPanel } from "../components/GlassPanel";
+import { ScrubberRail } from "../components/ScrubberRail";
 import { SearchInput } from "../components/SearchInput";
 import { AppStream } from "../components/AppStream";
 import { UtilityFooter } from "../components/UtilityFooter";
@@ -35,6 +36,17 @@ export default function LauncherPage() {
   const visibleSelectableItems = useMemo(() => {
     return getSelectableItems(apps, appLibraryState, expandedWorkspaceIds, searchQuery);
   }, [apps, appLibraryState, expandedWorkspaceIds, searchQuery]);
+
+  // Compute existing letters in the current app list for the A-Z ScrubberRail
+  const existingLetters = useMemo(() => {
+    const letters = new Set<string>();
+    apps.forEach((app) => {
+      if (!app.isHidden) {
+        letters.add(app.letter);
+      }
+    });
+    return Array.from(letters);
+  }, [apps]);
 
   // Adjust active index when filtered list changes size
   useEffect(() => {
@@ -220,6 +232,7 @@ export default function LauncherPage() {
           themePreset={settings.themePreset}
           panelOpacity={settings.panelOpacity}
           glassIntensity={settings.glassIntensity}
+          rail={<ScrubberRail existingLetters={existingLetters} />}
         >
           {/* Top Search Zone */}
           <SearchInput

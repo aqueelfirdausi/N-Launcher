@@ -150,9 +150,17 @@ export const AppStream: React.FC<AppStreamProps> = ({
           return (
             <div
               key={element.id}
-              className="text-[9px] font-bold text-white/30 uppercase tracking-widest pl-3.5 pt-4 pb-1 select-none border-b border-white/[0.02] mb-1"
+              id={element.id}
+              className="pl-3.5 pt-4 pb-1 mb-1 border-b border-white/[0.02] select-none"
             >
-              {element.title}
+              <div className="text-[9px] font-bold text-white/30 uppercase tracking-widest">
+                {element.title}
+              </div>
+              {element.title === "All Apps" && (
+                <div className="text-[9px] text-white/20 mt-0.5">
+                  Built-in + discovered Start Menu apps
+                </div>
+              )}
             </div>
           );
         }
@@ -161,7 +169,8 @@ export const AppStream: React.FC<AppStreamProps> = ({
           return (
             <div
               key={element.id}
-              className="text-[10px] font-bold text-cyan-400/50 pl-4 py-1 select-none"
+              id={element.id}
+              className="text-[10px] font-extrabold text-cyan-400/40 pl-4 pt-3 pb-0.5 select-none tracking-wider"
             >
               {element.letter}
             </div>

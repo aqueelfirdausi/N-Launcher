@@ -7,13 +7,15 @@ interface GlassPanelProps {
   themePreset: ThemePreset;
   panelOpacity: number;
   glassIntensity: GlassIntensity;
+  rail?: React.ReactNode;
 }
 
 export const GlassPanel: React.FC<GlassPanelProps> = ({
   children,
   themePreset,
   panelOpacity,
-  glassIntensity
+  glassIntensity,
+  rail
 }) => {
   const blurValue =
     glassIntensity === "subtle" ? "12px" :
@@ -41,7 +43,7 @@ export const GlassPanel: React.FC<GlassPanelProps> = ({
 
       {/* A-Z Navigation Rail */}
       <div className="w-[32px] h-full border-l border-white/5 bg-white/[0.01] py-4 flex items-center justify-center">
-        <ScrubberRail />
+        {rail || <ScrubberRail />}
       </div>
     </div>
   );

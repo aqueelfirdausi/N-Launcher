@@ -77,7 +77,7 @@ export const AppItem: React.FC<AppItemProps> = ({
             {displayName}
           </span>
           {!isWorkspace && (item as LauncherApp).source === "startMenu" && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-300/85 font-bold uppercase tracking-wider scale-90 origin-left shrink-0 select-none">
+            <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-cyan-300/60 font-bold uppercase tracking-wider scale-90 origin-left shrink-0 select-none">
               Preview
             </span>
           )}
