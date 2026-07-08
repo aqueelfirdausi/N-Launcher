@@ -3,7 +3,7 @@ import { LauncherApp, LauncherWorkspace } from "../lib/app-library";
 import { AppIcon } from "./AppIcon";
 import { clsx } from "clsx";
 import { UiDensity } from "../lib/settings";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Pin } from "lucide-react";
 
 interface AppItemProps {
   item: LauncherApp | LauncherWorkspace;
@@ -13,6 +13,7 @@ interface AppItemProps {
   uiDensity: UiDensity;
   isExpanded?: boolean;
   workspaceApps?: LauncherApp[];
+  onPinToggle?: (appId: string) => void;
 }
 
 export const AppItem: React.FC<AppItemProps> = ({
@@ -22,7 +23,8 @@ export const AppItem: React.FC<AppItemProps> = ({
   onClick,
   uiDensity,
   isExpanded = false,
-  workspaceApps = []
+  workspaceApps = [],
+  onPinToggle
 }) => {
   const isCompact = uiDensity === "compact";
   const isWorkspace = item.kind === "workspace";
@@ -92,6 +94,24 @@ export const AppItem: React.FC<AppItemProps> = ({
           </span>
         )}
       </div>
+
+      {!isWorkspace && onPinToggle && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPinToggle(item.id);
+          }}
+          className={clsx(
+            "ml-2 p-1 rounded transition-all duration-200 shrink-0 hover:bg-white/10 hover:text-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-cyan-500/50",
+            (item as LauncherApp).isPriority
+              ? "text-cyan-400 opacity-100"
+              : "text-white/20 opacity-0 group-hover:opacity-100 focus:opacity-100"
+          )}
+          title={(item as LauncherApp).isPriority ? "Remove from Priority" : "Pin to Priority"}
+        >
+          <Pin size={isCompact ? 12 : 14} className={clsx((item as LauncherApp).isPriority && "rotate-45 fill-cyan-400/20")} />
+        </button>
+      )}
 
       {/* Workspace Indicator Chevron or Active Arrow */}
       {isWorkspace ? (

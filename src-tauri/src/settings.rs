@@ -36,6 +36,18 @@ pub struct NSettings {
     pub glass_intensity: GlassIntensity,
     pub ui_density: UiDensity,
     pub hotkey_hint_visible: bool,
+    #[serde(default = "default_priority_apps")]
+    pub priority_apps: Vec<String>,
+}
+
+fn default_priority_apps() -> Vec<String> {
+    vec![
+        "vscode".to_string(),
+        "terminal".to_string(),
+        "chrome".to_string(),
+        "files".to_string(),
+        "notepad".to_string(),
+    ]
 }
 
 impl Default for NSettings {
@@ -47,6 +59,7 @@ impl Default for NSettings {
             glass_intensity: GlassIntensity::Standard,
             ui_density: UiDensity::Comfortable,
             hotkey_hint_visible: true,
+            priority_apps: default_priority_apps(),
         }
     }
 }
@@ -64,6 +77,13 @@ impl NSettings {
         } else if self.panel_opacity > 1.0 {
             self.panel_opacity = 1.0;
         }
+
+        // Deduplicate and sanitize priority_apps
+        let mut seen = std::collections::HashSet::new();
+        self.priority_apps.retain(|id| {
+            let trimmed = id.trim();
+            !trimmed.is_empty() && seen.insert(trimmed.to_string())
+        });
     }
 }
 

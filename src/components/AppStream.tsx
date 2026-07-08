@@ -13,6 +13,7 @@ interface AppStreamProps {
   expandedWorkspaceIds: string[];
   searchQuery: string;
   allApps: LauncherApp[];
+  onPinToggle?: (appId: string) => void;
 }
 
 type RenderElement =
@@ -37,6 +38,7 @@ export const AppStream: React.FC<AppStreamProps> = ({
   expandedWorkspaceIds,
   searchQuery,
   allApps,
+  onPinToggle,
 }) => {
   const elements: RenderElement[] = [];
 
@@ -191,6 +193,7 @@ export const AppStream: React.FC<AppStreamProps> = ({
               uiDensity={uiDensity}
               isExpanded={element.isExpanded}
               workspaceApps={element.workspaceApps}
+              onPinToggle={onPinToggle}
             />
           </div>
         );

@@ -29,8 +29,14 @@ export default function LauncherPage() {
   const [settings, setSettings] = useState<NSettings>(DEFAULT_SETTINGS);
 
   const [appLibraryState, setAppLibraryState] = useState(() => buildDefaultAppLibraryState());
-  const [apps, setApps] = useState(() => mergePriorityState(BUILT_IN_APPS, buildDefaultAppLibraryState()));
+  const [discoveredApps, setDiscoveredApps] = useState<LauncherApp[]>([]);
   const [expandedWorkspaceIds, setExpandedWorkspaceIds] = useState<string[]>([]);
+
+  // Compute the full app list by merging built-in and discovered apps, applying priority status flags
+  const apps = useMemo(() => {
+    const merged = mergeDiscoveredApps(BUILT_IN_APPS, discoveredApps);
+    return mergePriorityState(merged, appLibraryState);
+  }, [discoveredApps, appLibraryState]);
 
   // Compute selectable items based on library state, query and workspace expansion
   const visibleSelectableItems = useMemo(() => {
@@ -64,6 +70,12 @@ export default function LauncherPage() {
       getSettings()
         .then((loadedSettings) => {
           setSettings(loadedSettings);
+          if (loadedSettings.priorityApps) {
+            setAppLibraryState((prev) => ({
+              ...prev,
+              priorityAppIds: loadedSettings.priorityApps,
+            }));
+          }
         })
         .catch((err) => {
           setToastMessage(`Failed to load settings: ${err}`);
@@ -72,16 +84,28 @@ export default function LauncherPage() {
     });
   }, [isNative]);
 
+  // Sync priority apps when settings changes (e.g. from a reset)
+  useEffect(() => {
+    if (settings && settings.priorityApps) {
+      setAppLibraryState((prev) => {
+        if (JSON.stringify(prev.priorityAppIds) !== JSON.stringify(settings.priorityApps)) {
+          return {
+            ...prev,
+            priorityAppIds: settings.priorityApps,
+          };
+        }
+        return prev;
+      });
+    }
+  }, [settings]);
+
   // Load discovered Start Menu apps on initialization
   useEffect(() => {
     if (isNative) {
       import("@tauri-apps/api/core").then(({ invoke }) => {
         invoke<LauncherApp[]>("discover_start_menu_apps")
-          .then((discoveredApps) => {
-            setApps((prevApps) => {
-              const merged = mergeDiscoveredApps(BUILT_IN_APPS, discoveredApps);
-              return mergePriorityState(merged, appLibraryState);
-            });
+          .then((loaded) => {
+            setDiscoveredApps(loaded);
           })
           .catch((err) => {
             console.error("Failed to discover Start Menu apps:", err);
@@ -151,6 +175,41 @@ export default function LauncherPage() {
       setToastMessage(`Workspace "${item.workspace.name}" toggled. Workspace launch is coming soon.`);
       setTimeout(() => setToastMessage(null), 3000);
     }
+  };
+
+  // Handle toggling pin status to/from Priority section
+  const handlePinToggle = (appId: string) => {
+    setAppLibraryState((prev) => {
+      const isCurrentlyPriority = prev.priorityAppIds.includes(appId);
+      let updatedPriorityIds: string[];
+      if (isCurrentlyPriority) {
+        updatedPriorityIds = prev.priorityAppIds.filter((id) => id !== appId);
+        setToastMessage("Removed from Priority");
+      } else {
+        updatedPriorityIds = [...prev.priorityAppIds, appId];
+        setToastMessage("Pinned to Priority");
+      }
+      setTimeout(() => setToastMessage(null), 3000);
+
+      // Save to settings!
+      setSettings((prevSettings) => {
+        const updatedSettings = {
+          ...prevSettings,
+          priorityApps: updatedPriorityIds,
+        };
+        import("../lib/settings").then(({ saveSettings }) => {
+          saveSettings(updatedSettings).catch((err) => {
+            console.error("Failed to save settings with priority apps:", err);
+          });
+        });
+        return updatedSettings;
+      });
+
+      return {
+        ...prev,
+        priorityAppIds: updatedPriorityIds,
+      };
+    });
   };
 
   // Keyboard navigation event handler
@@ -251,6 +310,7 @@ export default function LauncherPage() {
             expandedWorkspaceIds={expandedWorkspaceIds}
             searchQuery={searchQuery}
             allApps={apps}
+            onPinToggle={handlePinToggle}
           />
 
           {/* Bottom Utility Footer */}

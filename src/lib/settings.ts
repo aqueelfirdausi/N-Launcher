@@ -9,6 +9,7 @@ export interface NSettings {
   glassIntensity: GlassIntensity;
   uiDensity: UiDensity;
   hotkeyHintVisible: boolean;
+  priorityApps: string[];
 }
 
 export const DEFAULT_SETTINGS: NSettings = {
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: NSettings = {
   glassIntensity: "standard",
   uiDensity: "comfortable",
   hotkeyHintVisible: true,
+  priorityApps: ["vscode", "terminal", "chrome", "files", "notepad"],
 };
 
 export const THEME_PRESET_OPTIONS: { value: ThemePreset; label: string }[] = [
