@@ -13,7 +13,8 @@ import {
   getSelectableItems,
   SelectableItem,
   LauncherApp,
-  mergePriorityState
+  mergePriorityState,
+  mergeDiscoveredApps
 } from "../lib/app-library";
 
 export default function LauncherPage() {
@@ -59,6 +60,26 @@ export default function LauncherPage() {
     });
   }, [isNative]);
 
+  // Load discovered Start Menu apps on initialization
+  useEffect(() => {
+    if (isNative) {
+      import("@tauri-apps/api/core").then(({ invoke }) => {
+        invoke<LauncherApp[]>("discover_start_menu_apps")
+          .then((discoveredApps) => {
+            setApps((prevApps) => {
+              const merged = mergeDiscoveredApps(BUILT_IN_APPS, discoveredApps);
+              return mergePriorityState(merged, appLibraryState);
+            });
+          })
+          .catch((err) => {
+            console.error("Failed to discover Start Menu apps:", err);
+          });
+      }).catch((err) => {
+        console.error("Failed to load Tauri core for discovery:", err);
+      });
+    }
+  }, [isNative]);
+
   // Auto-focus search input when it becomes available
   useEffect(() => {
     searchInputRef?.focus();
@@ -102,7 +123,12 @@ export default function LauncherPage() {
   // Handle selection of a list item
   const handleItemSelection = (item: SelectableItem) => {
     if (item.type === "app") {
-      triggerAppLaunch(item.app);
+      if (item.app.source === "startMenu") {
+        setToastMessage("Start Menu discovery is ready. Launch support will be added in a later safe phase.");
+        setTimeout(() => setToastMessage(null), 4000);
+      } else {
+        triggerAppLaunch(item.app);
+      }
     } else if (item.type === "workspace") {
       const workspaceId = item.workspace.id;
       setExpandedWorkspaceIds((prev) =>

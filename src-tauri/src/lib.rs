@@ -121,6 +121,112 @@ fn launch_chrome() -> Result<String, String> {
     Ok("Opened Chrome".to_string())
 }
 
+#[derive(serde::Serialize)]
+struct DiscoveredApp {
+    id: String,
+    name: String,
+    #[serde(rename = "normalizedName")]
+    normalized_name: String,
+    letter: String,
+    source: String,
+    kind: String,
+    #[serde(rename = "isPriority")]
+    is_priority: bool,
+    #[serde(rename = "isHidden")]
+    is_hidden: bool,
+}
+
+fn scan_programs_dir(dir: &std::path::Path, apps: &mut Vec<DiscoveredApp>) {
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                scan_programs_dir(&path, apps);
+            } else if path.is_file() {
+                if let Some(ext) = path.extension() {
+                    if ext.to_ascii_lowercase() == "lnk" {
+                        if let Some(file_stem) = path.file_stem() {
+                            if let Some(name_str) = file_stem.to_str() {
+                                let normalized = name_str.trim().to_lowercase();
+                                if normalized.contains("uninstall")
+                                    || normalized.contains("help")
+                                    || normalized.contains("read me")
+                                    || normalized.contains("readme")
+                                {
+                                    continue;
+                                }
+
+                                let first_char = name_str
+                                    .trim()
+                                    .chars()
+                                    .next()
+                                    .unwrap_or('#')
+                                    .to_uppercase()
+                                    .to_string();
+                                let letter =
+                                    if first_char.as_str() >= "A" && first_char.as_str() <= "Z" {
+                                        first_char
+                                    } else {
+                                        "#".to_string()
+                                    };
+
+                                let app_id = format!(
+                                    "lnk_{}",
+                                    normalized
+                                        .replace(" ", "_")
+                                        .replace("-", "_")
+                                        .replace(".", "_")
+                                );
+
+                                apps.push(DiscoveredApp {
+                                    id: app_id,
+                                    name: name_str.to_string(),
+                                    normalized_name: normalized,
+                                    letter,
+                                    source: "startMenu".to_string(),
+                                    kind: "app".to_string(),
+                                    is_priority: false,
+                                    is_hidden: false,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[tauri::command]
+fn discover_start_menu_apps() -> Result<Vec<DiscoveredApp>, String> {
+    let mut apps = Vec::new();
+
+    // 1. System Start Menu
+    let system_start_menu =
+        std::path::Path::new(r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs");
+    if system_start_menu.exists() {
+        scan_programs_dir(system_start_menu, &mut apps);
+    }
+
+    // 2. User Start Menu
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        let user_start_menu = std::path::Path::new(&appdata)
+            .join("Microsoft")
+            .join("Windows")
+            .join("Start Menu")
+            .join("Programs");
+        if user_start_menu.exists() {
+            scan_programs_dir(&user_start_menu, &mut apps);
+        }
+    }
+
+    // Deduplicate by normalized name
+    apps.sort_by(|a, b| a.normalized_name.cmp(&b.normalized_name));
+    apps.dedup_by(|a, b| a.normalized_name == b.normalized_name);
+
+    Ok(apps)
+}
+
 #[tauri::command]
 fn launch_app(target_id: String) -> Result<String, String> {
     // Handle VS Code separately due to dynamic resolution
@@ -156,6 +262,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             launch_app,
+            discover_start_menu_apps,
             settings::get_settings,
             settings::save_settings,
             settings::reset_settings

@@ -68,13 +68,20 @@ export const AppItem: React.FC<AppItemProps> = ({
 
       {/* Label Info */}
       <div className="flex flex-col flex-1 min-w-0">
-        <span className={clsx(
-          "font-medium tracking-wide transition-colors duration-300 truncate",
-          isCompact ? "text-[13px]" : "text-[14px]",
-          isActive ? "text-emerald-200" : "text-white/80 group-hover:text-white"
-        )}>
-          {displayName}
-        </span>
+        <div className="flex items-center space-x-1.5 min-w-0">
+          <span className={clsx(
+            "font-medium tracking-wide transition-colors duration-300 truncate",
+            isCompact ? "text-[13px]" : "text-[14px]",
+            isActive ? "text-emerald-200" : "text-white/80 group-hover:text-white"
+          )}>
+            {displayName}
+          </span>
+          {!isWorkspace && (item as LauncherApp).source === "startMenu" && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-300/85 font-bold uppercase tracking-wider scale-90 origin-left shrink-0 select-none">
+              Preview
+            </span>
+          )}
+        </div>
         {description && (
           <span className={clsx(
             "truncate transition-colors duration-300 mt-0.5",

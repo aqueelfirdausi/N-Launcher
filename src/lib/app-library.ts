@@ -249,3 +249,10 @@ export const BUILT_IN_APPS: LauncherApp[] = [
     description: "Text Editor",
   },
 ];
+
+export function mergeDiscoveredApps(builtIn: LauncherApp[], discovered: LauncherApp[]): LauncherApp[] {
+  const dedupedDiscovered = discovered.filter(
+    (d) => !builtIn.some((b) => b.normalizedName === d.normalizedName)
+  );
+  return [...builtIn, ...dedupedDiscovered];
+}
