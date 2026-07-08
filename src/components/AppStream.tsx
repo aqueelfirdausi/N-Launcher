@@ -153,7 +153,7 @@ export const AppStream: React.FC<AppStreamProps> = ({
             <div
               key={element.id}
               id={element.id}
-              className="pl-3.5 pt-4 pb-1 mb-1 border-b border-white/[0.02] select-none"
+              className="pl-3.5 pt-5 pb-1 mb-1 border-b border-white/[0.02] select-none"
             >
               <div className="text-[9px] font-bold text-white/30 uppercase tracking-widest">
                 {element.title}
@@ -172,7 +172,7 @@ export const AppStream: React.FC<AppStreamProps> = ({
             <div
               key={element.id}
               id={element.id}
-              className="text-[10px] font-extrabold text-cyan-400/40 pl-4 pt-3 pb-0.5 select-none tracking-wider"
+              className="text-[10px] font-extrabold text-[var(--color-active-glow-end)]/40 pl-4 pt-3 pb-0.5 select-none tracking-wider"
             >
               {element.letter}
             </div>

@@ -43,7 +43,7 @@ export const ScrubberRail: React.FC<ScrubberRailProps> = ({ existingLetters }) =
             className={clsx(
               "text-[9px] font-bold transition-all duration-150 py-0.5 px-1 leading-none select-none",
               exists
-                ? "text-white/70 hover:text-cyan-400 hover:drop-shadow-[0_0_3px_rgba(6,182,212,0.8)] hover:scale-130 cursor-pointer"
+                ? "text-white/70 hover:text-[var(--color-active-glow-end)] hover:drop-shadow-[0_0_3px_var(--active-glow-shadow)] hover:scale-130 cursor-pointer"
                 : "text-white/20 cursor-default"
             )}
             title={exists ? `Scroll to: ${char}` : `No apps starting with ${char}`}

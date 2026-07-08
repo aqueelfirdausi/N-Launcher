@@ -42,6 +42,11 @@ body {
     rgba(20, 12, 38, var(--panel-opacity, 0.82)) 0%,
     rgba(8, 4, 16, calc(var(--panel-opacity, 0.82) + 0.12)) 100%
   );
+  --color-active-glow-start: #8b5cf6; /* Violet */
+  --color-active-glow-end: #06b6d4;   /* Cyan */
+  --active-bg-gradient-start: rgba(139, 92, 246, 0.12);
+  --active-bg-gradient-end: rgba(6, 182, 212, 0.12);
+  --active-glow-shadow: rgba(6, 182, 212, 0.25);
 }
 
 .glass-vessel[data-theme="minimalDark"] {
@@ -51,6 +56,11 @@ body {
     rgba(8, 8, 8, calc(var(--panel-opacity, 0.82) + 0.12)) 100%
   );
   border: 1px solid rgba(255, 255, 255, 0.06);
+  --color-active-glow-start: #ffffff; /* White */
+  --color-active-glow-end: #71717a;   /* Zinc-500 */
+  --active-bg-gradient-start: rgba(255, 255, 255, 0.08);
+  --active-bg-gradient-end: rgba(113, 113, 122, 0.08);
+  --active-glow-shadow: rgba(255, 255, 255, 0.1);
 }
 
 .glass-vessel[data-theme="softGlass"] {
@@ -64,6 +74,11 @@ body {
     inset 1px 1px 0px rgba(255, 255, 255, 0.25),
     inset -1px -1px 0px rgba(0, 0, 0, 0.15),
     0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  --color-active-glow-start: #06b6d4; /* Cyan */
+  --color-active-glow-end: #3b82f6;   /* Blue */
+  --active-bg-gradient-start: rgba(6, 182, 212, 0.12);
+  --active-bg-gradient-end: rgba(59, 130, 246, 0.12);
+  --active-glow-shadow: rgba(6, 182, 212, 0.2);
 }
 
 /* Theme Focus Border Accents */
@@ -82,13 +97,13 @@ body {
   position: relative;
   background: linear-gradient(
     90deg,
-    rgba(16, 185, 129, 0.1) 0%,
-    rgba(6, 182, 212, 0.1) 100%
+    var(--active-bg-gradient-start, rgba(16, 185, 129, 0.1)) 0%,
+    var(--active-bg-gradient-end, rgba(6, 182, 212, 0.1)) 100%
   );
   border-radius: 12px;
   box-shadow: 
-    0 0 15px rgba(6, 182, 212, 0.25),
-    inset 0 0 8px rgba(16, 185, 129, 0.05);
+    0 0 15px var(--active-glow-shadow, rgba(6, 182, 212, 0.25)),
+    inset 0 0 8px rgba(255, 255, 255, 0.02);
 }
 
 .active-glow-container::before {
@@ -97,7 +112,7 @@ body {
   inset: 0;
   border-radius: 12px;
   padding: 1.5px; /* Border thickness */
-  background: linear-gradient(90deg, var(--color-active-glow-start), var(--color-active-glow-end));
+  background: linear-gradient(90deg, var(--color-active-glow-start, #10b981), var(--color-active-glow-end, #06b6d4));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
