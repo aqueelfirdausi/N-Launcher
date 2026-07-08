@@ -1,39 +1,44 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { MOCK_APPS } from "../lib/mockData";
-import { AppItemType } from "../lib/types";
+import React, { useState, useEffect, useMemo } from "react";
 import { GlassPanel } from "../components/GlassPanel";
 import { SearchInput } from "../components/SearchInput";
 import { AppStream } from "../components/AppStream";
 import { UtilityFooter } from "../components/UtilityFooter";
 import { SettingsModal } from "../components/SettingsModal";
 import { DEFAULT_SETTINGS, NSettings } from "../lib/settings";
+import {
+  BUILT_IN_APPS,
+  buildDefaultAppLibraryState,
+  getSelectableItems,
+  SelectableItem,
+  LauncherApp,
+  mergePriorityState
+} from "../lib/app-library";
 
 export default function LauncherPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  
+
   const [searchInputRef, setSearchInputRef] = useState<HTMLInputElement | null>(null);
   const [isNative, setIsNative] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<NSettings>(DEFAULT_SETTINGS);
 
-  // Filter apps list based on query
-  const filteredApps = useMemo(() => {
-    if (!searchQuery.trim()) return MOCK_APPS;
-    
-    return MOCK_APPS.filter((app) =>
-      app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (app.description && app.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  }, [searchQuery]);
+  const [appLibraryState, setAppLibraryState] = useState(() => buildDefaultAppLibraryState());
+  const [apps, setApps] = useState(() => mergePriorityState(BUILT_IN_APPS, buildDefaultAppLibraryState()));
+  const [expandedWorkspaceIds, setExpandedWorkspaceIds] = useState<string[]>([]);
+
+  // Compute selectable items based on library state, query and workspace expansion
+  const visibleSelectableItems = useMemo(() => {
+    return getSelectableItems(apps, appLibraryState, expandedWorkspaceIds, searchQuery);
+  }, [apps, appLibraryState, expandedWorkspaceIds, searchQuery]);
 
   // Adjust active index when filtered list changes size
   useEffect(() => {
     setActiveIndex(0);
-  }, [filteredApps]);
+  }, [visibleSelectableItems]);
 
   // Detect Tauri native environment
   useEffect(() => {
@@ -72,7 +77,7 @@ export default function LauncherPage() {
   };
 
   // Handle simulated action launches
-  const triggerAppLaunch = (app: AppItemType) => {
+  const triggerAppLaunch = (app: LauncherApp) => {
     if (isNative) {
       import("@tauri-apps/api/core").then(({ invoke }) => {
         invoke<string>("launch_app", { targetId: app.id })
@@ -94,33 +99,49 @@ export default function LauncherPage() {
     }
   };
 
+  // Handle selection of a list item
+  const handleItemSelection = (item: SelectableItem) => {
+    if (item.type === "app") {
+      triggerAppLaunch(item.app);
+    } else if (item.type === "workspace") {
+      const workspaceId = item.workspace.id;
+      setExpandedWorkspaceIds((prev) =>
+        prev.includes(workspaceId)
+          ? prev.filter((id) => id !== workspaceId)
+          : [...prev, workspaceId]
+      );
+      setToastMessage(`Workspace "${item.workspace.name}" toggled. Workspace launch is coming soon.`);
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
   // Keyboard navigation event handler
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       // Focus search automatically if user starts typing letters
       if (
-        document.activeElement !== searchInputRef && 
-        e.key.length === 1 && 
-        !e.ctrlKey && 
-        !e.altKey && 
+        document.activeElement !== searchInputRef &&
+        e.key.length === 1 &&
+        !e.ctrlKey &&
+        !e.altKey &&
         !e.metaKey
       ) {
         searchInputRef?.focus();
         return;
       }
 
-      if (filteredApps.length === 0) return;
+      if (visibleSelectableItems.length === 0) return;
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setActiveIndex((prev) => (prev + 1) % filteredApps.length);
+        setActiveIndex((prev) => (prev + 1) % visibleSelectableItems.length);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setActiveIndex((prev) => (prev - 1 + filteredApps.length) % filteredApps.length);
+        setActiveIndex((prev) => (prev - 1 + visibleSelectableItems.length) % visibleSelectableItems.length);
       } else if (e.key === "Enter") {
         e.preventDefault();
-        if (filteredApps[activeIndex]) {
-          triggerAppLaunch(filteredApps[activeIndex]);
+        if (visibleSelectableItems[activeIndex]) {
+          handleItemSelection(visibleSelectableItems[activeIndex]);
         }
       } else if (e.key === "Escape") {
         e.preventDefault();
@@ -141,17 +162,17 @@ export default function LauncherPage() {
 
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [filteredApps, activeIndex, searchInputRef, isSettingsOpen, isNative]);
+  }, [visibleSelectableItems, activeIndex, searchInputRef, isSettingsOpen, isNative, searchQuery]);
 
   return (
     <main className={`w-screen h-screen relative overflow-hidden select-none flex items-center justify-center font-sans ${isNative ? "bg-transparent" : "bg-[#0a0614]"}`}>
-      {/* 
+      {/*
         Windows 11 Mock Desktop Environment:
-        An interactive simulated workspace displaying a deep violet / black ambient aurora backdrop 
+        An interactive simulated workspace displaying a deep violet / black ambient aurora backdrop
         to show how the transparent launcher panel floats and blurs the desktop underneath.
       */}
       {!isNative && (
-        <div 
+        <div
           className="absolute inset-0 w-full h-full"
           style={{
             background: `
@@ -175,19 +196,22 @@ export default function LauncherPage() {
           glassIntensity={settings.glassIntensity}
         >
           {/* Top Search Zone */}
-          <SearchInput 
-            value={searchQuery} 
-            onChange={setSearchQuery} 
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
             inputRef={setSearchInputRef}
           />
 
           {/* Middle App Listing */}
-          <AppStream 
-            apps={filteredApps} 
-            activeIndex={activeIndex} 
+          <AppStream
+            items={visibleSelectableItems}
+            activeIndex={activeIndex}
             setActiveIndex={setActiveIndex}
-            onAppClick={triggerAppLaunch}
+            onItemClick={handleItemSelection}
             uiDensity={settings.uiDensity}
+            expandedWorkspaceIds={expandedWorkspaceIds}
+            searchQuery={searchQuery}
+            allApps={apps}
           />
 
           {/* Bottom Utility Footer */}
