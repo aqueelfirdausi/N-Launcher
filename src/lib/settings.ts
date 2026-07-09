@@ -63,7 +63,9 @@ export const UI_DENSITY_OPTIONS: { value: UiDensity; label: string }[] = [
   { value: "compact", label: "Compact" },
 ];
 
-const isNative = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__ !== undefined;
+const isNative =
+  typeof window !== "undefined" &&
+  (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !== undefined;
 
 export async function getSettings(): Promise<NSettings> {
   if (isNative) {

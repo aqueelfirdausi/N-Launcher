@@ -62,7 +62,10 @@ export default function LauncherPage() {
 
   // Detect Tauri native environment
   useEffect(() => {
-    setIsNative((window as any).__TAURI_INTERNALS__ !== undefined);
+    setIsNative(
+      typeof window !== "undefined" &&
+        (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !== undefined
+    );
   }, []);
 
   // Load settings from backend on initialization
@@ -167,7 +170,7 @@ export default function LauncherPage() {
             setToastMessage(safeMsg);
             setTimeout(() => setToastMessage(null), 4000);
           });
-      }).catch((err) => {
+      }).catch(() => {
         setIsLaunching(null);
         setToastMessage("Failed to initialize launch system.");
         setTimeout(() => setToastMessage(null), 3000);
@@ -281,6 +284,7 @@ export default function LauncherPage() {
 
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleSelectableItems, activeIndex, searchInputRef, isSettingsOpen, isNative, searchQuery]);
 
   return (

@@ -1,5 +1,5 @@
 import React from "react";
-import { LauncherApp, LauncherWorkspace, SelectableItem } from "../lib/app-library";
+import { LauncherApp, SelectableItem } from "../lib/app-library";
 import { AppItem } from "./AppItem";
 import { UiDensity } from "../lib/settings";
 import { clsx } from "clsx";
