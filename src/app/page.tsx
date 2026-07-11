@@ -8,6 +8,7 @@ import { AppStream } from "../components/AppStream";
 import { UtilityFooter } from "../components/UtilityFooter";
 import { SettingsModal } from "../components/SettingsModal";
 import { DEFAULT_SETTINGS, NSettings } from "../lib/settings";
+import { HotkeyConflictNotice } from "../components/HotkeyConflictNotice";
 import {
   BUILT_IN_APPS,
   buildDefaultAppLibraryState,
@@ -27,6 +28,8 @@ export default function LauncherPage() {
   const [isNative, setIsNative] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<NSettings>(DEFAULT_SETTINGS);
+  const [globalHotkeyAvailable, setGlobalHotkeyAvailable] = useState<boolean | null>(null);
+  const [hotkeyNoticeDismissed, setHotkeyNoticeDismissed] = useState(false);
 
   const [appLibraryState, setAppLibraryState] = useState(() => buildDefaultAppLibraryState());
   const [discoveredApps, setDiscoveredApps] = useState<LauncherApp[]>([]);
@@ -116,6 +119,23 @@ export default function LauncherPage() {
           });
       }).catch((err) => {
         console.error("Failed to load Tauri core for discovery:", err);
+      });
+    }
+  }, [isNative]);
+
+  // Query global hotkey availability status on mount
+  useEffect(() => {
+    if (isNative) {
+      import("@tauri-apps/api/core").then(({ invoke }) => {
+        invoke<boolean>("is_global_hotkey_available")
+          .then((available) => {
+            setGlobalHotkeyAvailable(available);
+          })
+          .catch((err) => {
+            console.error("Failed to query global hotkey availability:", err);
+          });
+      }).catch((err) => {
+        console.error("Failed to load Tauri core for hotkey check:", err);
       });
     }
   }, [isNative]);
@@ -325,6 +345,11 @@ export default function LauncherPage() {
             onChange={setSearchQuery}
             inputRef={setSearchInputRef}
           />
+
+          {/* Hotkey Conflict warning notice */}
+          {globalHotkeyAvailable === false && !hotkeyNoticeDismissed && (
+            <HotkeyConflictNotice onDismiss={() => setHotkeyNoticeDismissed(true)} />
+          )}
 
           {/* Middle App Listing */}
           <AppStream

@@ -389,6 +389,17 @@ fn launch_app(target_id: String) -> Result<String, String> {
     Err("Unknown target id".to_string())
 }
 
+struct AppState {
+    global_hotkey_available: std::sync::atomic::AtomicBool,
+}
+
+#[tauri::command]
+fn is_global_hotkey_available(state: tauri::State<'_, AppState>) -> bool {
+    state
+        .global_hotkey_available
+        .load(std::sync::atomic::Ordering::Relaxed)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -398,7 +409,8 @@ pub fn run() {
             launch_discovered_app,
             settings::get_settings,
             settings::save_settings,
-            settings::reset_settings
+            settings::reset_settings,
+            is_global_hotkey_available
         ])
         .on_menu_event(|app, event| match event.id.0.as_str() {
             "show" => {
@@ -464,16 +476,22 @@ pub fn run() {
 
             // Register the Ctrl+Alt+Space shortcut
             use std::str::FromStr;
+            let mut hotkey_available = true;
             match Shortcut::from_str("ctrl+alt+space") {
                 Ok(ctrl_alt_space) => {
                     if let Err(e) = app.global_shortcut().register(ctrl_alt_space) {
                         log::error!("Failed to register Ctrl+Alt+Space global shortcut: {}", e);
+                        hotkey_available = false;
                     }
                 }
                 Err(e) => {
                     log::error!("Failed to parse Ctrl+Alt+Space shortcut: {}", e);
+                    hotkey_available = false;
                 }
             }
+            app.manage(AppState {
+                global_hotkey_available: std::sync::atomic::AtomicBool::new(hotkey_available),
+            });
 
             Ok(())
         })
